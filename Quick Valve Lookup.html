@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Valve Bench Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: #0d0d0d; font-family: 'Rajdhani', sans-serif; -webkit-tap-highlight-color: transparent; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+
+    #app { background: #0d0d0d; min-height: 100dvh; max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; }
+
+    /* Header */
+    #header { background: #111; border-bottom: 2px solid #AD1800; padding: 12px 16px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    #header-icon { background: #AD1800; padding: 7px; display: flex; flex-shrink: 0; }
+    #header-title { font-family: 'Rajdhani', sans-serif; font-size: 15px; font-weight: 700; color: #fff; letter-spacing: 0.1em; text-transform: uppercase; line-height: 1.1; }
+    #header-sub { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: #888; margin-top: 2px; }
+
+    /* Tabs */
+    #tabs { display: flex; background: #111; border-bottom: 1px solid #1e1e1e; flex-shrink: 0; }
+    .tab-btn { flex: 1; padding: 13px 0; background: none; border: none; border-bottom: 2px solid transparent; color: #aaa; cursor: pointer; font-family: 'Rajdhani', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; transition: color 0.15s; }
+    .tab-btn.active { border-bottom-color: #AD1800; color: #ff4444; }
+
+    /* Body */
+    #body { flex: 1; overflow-y: auto; padding: 16px; padding-bottom: 40px; }
+    .tab-panel { display: none; flex-direction: column; gap: 20px; }
+    .tab-panel.active { display: flex; }
+
+    /* Field label */
+    .field-label { font-family: 'Rajdhani', sans-serif; font-size: 11px; letter-spacing: 0.1em; color: #aaa; text-transform: uppercase; margin-bottom: 8px; font-weight: 600; }
+
+    /* Brand toggle — shared by Valve + Actuator */
+    .brand-toggle { display: flex; border: 1px solid #3a3a3a; }
+    .brand-btn { flex: 1; padding: 12px 0; background: #1a1a1a; color: #aaa; border: none; cursor: pointer; font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; min-height: 48px; transition: background 0.15s, color 0.15s; }
+    .brand-btn.active { background: #AD1800; color: #fff; }
+
+    /* Fisher cross-ref link */
+    .xref-link { margin-top: 8px; font-family: 'Rajdhani', sans-serif; font-size: 11px; color: #ff6644; letter-spacing: 0.08em; text-transform: uppercase; background: none; border: none; cursor: pointer; padding: 0; text-decoration: underline; display: none; }
+
+    /* Pills */
+    .pill-group { display: flex; flex-wrap: wrap; gap: 6px; }
+    .pill { font-family: 'Share Tech Mono', monospace; padding: 8px 13px; font-size: 13px; border: 1px solid #3a3a3a; background: #1a1a1a; color: #ccc; border-radius: 2px; cursor: pointer; min-width: 46px; min-height: 40px; white-space: nowrap; transition: background 0.1s, color 0.1s, border-color 0.1s; }
+    .pill.compact { padding: 6px 10px; font-size: 12px; min-width: 38px; min-height: 34px; }
+    .pill.active { border-color: #AD1800; background: #2a0800; color: #ff6040; }
+
+    /* Error */
+    .error-box { display: none; align-items: flex-start; gap: 8px; background: #1e0000; border: 1px solid #5a0000; padding: 11px 13px; }
+    .error-box.visible { display: flex; }
+    .error-text { font-family: 'Share Tech Mono', monospace; font-size: 12px; color: #ff6060; }
+
+    /* Lookup button */
+    .lookup-btn { background: #AD1800; color: #fff; border: none; padding: 15px; font-family: 'Rajdhani', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; width: 100%; }
+    .lookup-btn:active { background: #8f1400; }
+
+    /* Results */
+    .results-section { display: none; flex-direction: column; gap: 12px; }
+    .results-section.visible { display: flex; }
+    .results-divider { border-top: 1px solid #333; padding-top: 8px; font-family: 'Rajdhani', sans-serif; font-size: 10px; letter-spacing: 0.12em; color: #888; text-transform: uppercase; }
+    .result-card { background: #1a1a1a; border: 1px solid #333; padding: 13px 14px; }
+    .result-label { font-family: 'Rajdhani', sans-serif; font-size: 10px; letter-spacing: 0.1em; color: #888; text-transform: uppercase; margin-bottom: 5px; }
+    .resolved-model { font-family: 'Share Tech Mono', monospace; font-size: 15px; color: #f0f0f0; }
+    .resolved-sub { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: #888; margin-top: 3px; }
+
+    /* Ramp cards */
+    .ramp-row { display: flex; gap: 10px; }
+    .ramp-card { flex: 1; background: #0d0d0d; border: 1px solid #333; padding: 14px; }
+    .ramp-card-label { font-family: 'Rajdhani', sans-serif; font-size: 10px; letter-spacing: 0.1em; color: #888; text-transform: uppercase; margin-bottom: 6px; }
+    .ramp-value { font-family: 'Share Tech Mono', monospace; font-size: 30px; font-weight: 700; color: #ff4444; line-height: 1; }
+    .ramp-value.max { color: #f0a820; }
+    .ramp-unit { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: #666; margin-top: 3px; }
+    .ramp-warning { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: #a07000; margin-top: 6px; display: none; }
+    .ramp-warning.visible { display: block; }
+
+    /* Manual result card */
+    .manual-card { background: #1a1a1a; border: 1px solid #333; padding: 13px 14px; }
+    .manual-inner { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .manual-ref-text { font-family: 'Share Tech Mono', monospace; font-size: 22px; font-weight: 700; color: #ff4444; }
+    .manual-page-text { font-family: 'Share Tech Mono', monospace; font-size: 13px; color: #ddd; margin-top: 2px; }
+    .manual-models-text { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: #888; margin-top: 2px; }
+    .manual-open-btn { background: #AD1800; color: #fff; text-decoration: none; padding: 12px 18px; font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; display: flex; align-items: center; gap: 7px; min-height: 48px; flex-shrink: 0; white-space: nowrap; }
+    .no-manual-text { font-family: 'Share Tech Mono', monospace; font-size: 13px; color: #666; }
+
+    /* Instrument tab cards */
+    .ref-list { display: flex; flex-direction: column; gap: 10px; }
+    .ref-card { background: #1a1a1a; border: 1px solid #333; padding: 14px; }
+    .ref-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .ref-name { font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 600; color: #eee; letter-spacing: 0.03em; }
+    .ref-sub { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: #888; margin-top: 2px; }
+    .ref-btn { display: flex; align-items: center; justify-content: center; gap: 7px; background: #AD1800; color: #fff; text-decoration: none; padding: 11px 0; font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; width: 100%; min-height: 44px; }
+
+    /* Cross-ref modal */
+    .xref-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.96); z-index: 300; flex-direction: column; }
+    .xref-modal.open { display: flex; }
+    .xref-modal-header { background: #111; border-bottom: 1px solid #2a2a2a; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .xref-modal-title { font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 700; color: #ccc; letter-spacing: 0.1em; text-transform: uppercase; }
+    .xref-modal-close { background: none; border: none; color: #aaa; cursor: pointer; font-size: 22px; line-height: 1; padding: 4px; }
+    .xref-modal-body { flex: 1; overflow-y: auto; padding: 8px 16px 24px; }
+    .xref-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 0; border-bottom: 1px solid #1e1e1e; }
+    .xref-key { font-family: 'Share Tech Mono', monospace; font-size: 14px; color: #aaa; }
+    .xref-val { font-family: 'Share Tech Mono', monospace; font-size: 14px; color: #eee; }
+
+    #footer { border-top: 1px solid #1a1a1a; padding: 10px 16px; flex-shrink: 0; font-family: 'Share Tech Mono', monospace; font-size: 10px; color: #444; }
+    .icon { display: inline-block; vertical-align: middle; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <div id="header">
+    <div id="header-icon">
+      <!-- Magnifying glass icon -->
+      <svg class="icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+    </div>
+    <div>
+      <div id="header-title">Valve Bench Assistant</div>
+      <div id="header-sub">Ramp pressure · Manual pages · Field lookup</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div id="tabs">
+    <button class="tab-btn active" onclick="switchTab('valve')">Valve</button>
+    <button class="tab-btn" onclick="switchTab('actuator')">Actuator</button>
+    <button class="tab-btn" onclick="switchTab('instrument')">Instrument</button>
+  </div>
+
+  <div id="body">
+
+    <!-- ═══════════════════════════════════════════════
+         VALVE TAB
+    ═══════════════════════════════════════════════ -->
+    <div id="tab-valve" class="tab-panel active">
+      <div>
+        <div class="field-label">Brand</div>
+        <div class="brand-toggle" id="valve-brand-toggle">
+          <button class="brand-btn active" onclick="setValveBrand('Dyna-Flo')">Dyna-Flo</button>
+          <button class="brand-btn" onclick="setValveBrand('Fisher')">Fisher</button>
+        </div>
+        <button class="xref-link" id="valve-fisher-link" onclick="openXrefModal('valve')">View Fisher → Dyna-Flo table →</button>
+      </div>
+      <div>
+        <div class="field-label" id="valve-type-label">Valve Type (Dyna-Flo)</div>
+        <div id="valve-type-pills" class="pill-group"></div>
+      </div>
+      <div>
+        <div class="field-label">Valve Size</div>
+        <div id="valve-size-pills" class="pill-group"></div>
+      </div>
+      <div>
+        <div class="field-label">Flange Rating (#)</div>
+        <div id="valve-rating-pills" class="pill-group"></div>
+      </div>
+      <div class="error-box" id="valve-error">
+        <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff6060" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span class="error-text" id="valve-error-text"></span>
+      </div>
+      <button class="lookup-btn" onclick="doValveLookup()">
+        <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Lookup
+      </button>
+      <div class="results-section" id="valve-results">
+        <div class="results-divider">Results</div>
+        <div class="result-card">
+          <div class="result-label">Resolved Valve</div>
+          <div class="resolved-model" id="valve-resolved-model"></div>
+          <div class="resolved-sub" id="valve-resolved-sub"></div>
+        </div>
+        <div>
+          <div class="field-label" style="margin-bottom:8px">Ramp Pressure</div>
+          <div class="ramp-row">
+            <div class="ramp-card"><div class="ramp-card-label">Test Bench #11</div><div class="ramp-value" id="valve-tb11"></div><div class="ramp-unit">psig</div></div>
+            <div class="ramp-card"><div class="ramp-card-label">Test Bench #14</div><div class="ramp-value" id="valve-tb14"></div><div class="ramp-unit">psig</div></div>
+          </div>
+          <div class="ramp-warning" id="valve-ramp-warn">⚠ 5000 psig = bench maximum</div>
+        </div>
+        <div class="manual-card">
+          <div class="result-label">Manual</div>
+          <div class="manual-inner" id="valve-manual-inner">
+            <div>
+              <div class="manual-ref-text" id="valve-manual-ref"></div>
+              <div class="manual-page-text" id="valve-manual-page"></div>
+              <div class="manual-models-text" id="valve-manual-models"></div>
+            </div>
+            <a class="manual-open-btn" id="valve-manual-btn" href="#" target="_blank" rel="noopener noreferrer">
+              <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              <span id="valve-manual-btn-text">Open Manual</span>
+            </a>
+          </div>
+          <div class="no-manual-text" id="valve-no-manual" style="display:none"></div>
+        </div>
+      </div>
+    </div><!-- /tab-valve -->
+
+    <!-- ═══════════════════════════════════════════════
+         ACTUATOR TAB
+    ═══════════════════════════════════════════════ -->
+    <div id="tab-actuator" class="tab-panel">
+      <div>
+        <div class="field-label">Brand</div>
+        <div class="brand-toggle" id="act-brand-toggle">
+          <button class="brand-btn active" onclick="setActBrand('Dyna-Flo')">Dyna-Flo</button>
+          <button class="brand-btn" onclick="setActBrand('Fisher')">Fisher</button>
+        </div>
+        <button class="xref-link" id="act-fisher-link" onclick="openXrefModal('act')">View Fisher → Dyna-Flo table →</button>
+      </div>
+      <div>
+        <div class="field-label" id="act-type-label">Actuator Type (Dyna-Flo)</div>
+        <div id="act-type-pills" class="pill-group"></div>
+      </div>
+      <div class="error-box" id="act-error">
+        <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff6060" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span class="error-text" id="act-error-text"></span>
+      </div>
+      <button class="lookup-btn" onclick="doActLookup()">
+        <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Lookup
+      </button>
+      <div class="results-section" id="act-results">
+        <div class="results-divider">Results</div>
+        <div class="result-card">
+          <div class="result-label">Resolved Actuator</div>
+          <div class="resolved-model" id="act-resolved-model"></div>
+          <div class="resolved-sub" id="act-resolved-sub"></div>
+        </div>
+        <div class="manual-card">
+          <div class="result-label">Manual</div>
+          <div class="manual-inner" id="act-manual-inner">
+            <div>
+              <div class="manual-ref-text" id="act-manual-ref"></div>
+              <div class="manual-page-text" id="act-manual-page"></div>
+              <div class="manual-models-text" id="act-manual-models"></div>
+            </div>
+            <a class="manual-open-btn" id="act-manual-btn" href="#" target="_blank" rel="noopener noreferrer">
+              <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              <span id="act-manual-btn-text">Open Manual</span>
+            </a>
+          </div>
+          <div class="no-manual-text" id="act-no-manual" style="display:none"></div>
+        </div>
+      </div>
+    </div><!-- /tab-actuator -->
+
+    <!-- ═══════════════════════════════════════════════
+         INSTRUMENT TAB
+    ═══════════════════════════════════════════════ -->
+    <div id="tab-instrument" class="tab-panel">
+      <div class="field-label">Instrument Manuals</div>
+      <div id="instrument-list" class="ref-list"></div>
+    </div>
+
+  </div><!-- /body -->
+  <div id="footer">Curtiss-Wright Dyna-Flo · All pressures in psig</div>
+</div><!-- /app -->
+
+<!-- Cross-ref modal (shared) -->
+<div class="xref-modal" id="xref-modal">
+  <div class="xref-modal-header">
+    <div class="xref-modal-title" id="xref-modal-title">Fisher → Dyna-Flo</div>
+    <button class="xref-modal-close" onclick="closeXrefModal()">✕</button>
+  </div>
+  <div class="xref-modal-body" id="xref-modal-body"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// VALVE DATA
+// ═══════════════════════════════════════════════════════════
+const VALVE_FISHER_TO_DF = {
+  "D2":"100","D BODY":"2000","D3":"233","D4":"270",
+  "ET":"360","ED":"361","ES":"362","EZ":"363",
+  "LARGE ET":"370","LARGE ED":"371",
+  "EHT":"380","EHD":"381","EHS":"382",
+  "HPT":"390","HPD":"391","HPS":"392",
+  "V200":"570","V150":"571","V300":"573",
+  "V250":"590","8500":"7000"
+};
+
+const VALVE_MANUAL_MAP = {
+  "360":{models:"360, 361, 362, 363",url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/360_instructions_P-360M.pdf",page:32,ref:"P-360M"},
+  "361":{models:"360, 361, 362, 363",url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/360_instructions_P-360M.pdf",page:32,ref:"P-360M"},
+  "362":{models:"360, 361, 362, 363",url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/360_instructions_P-360M.pdf",page:32,ref:"P-360M"},
+  "363":{models:"360, 361, 362, 363",url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/360_instructions_P-360M.pdf",page:32,ref:"P-360M"},
+  "390":{models:"390, 391, 392",url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/390_391_392_instructions_P-390M.pdf",page:26,ref:"P-390M"},
+  "391":{models:"390, 391, 392",url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/390_391_392_instructions_P-390M.pdf",page:26,ref:"P-390M"},
+  "392":{models:"390, 391, 392",url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/390_391_392_instructions_P-390M.pdf",page:26,ref:"P-390M"},
+  "320":{models:"320",url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/320_instructions_P-320M.pdf",page:25,ref:"P-320M"},
+  "350":{models:"350, 351",url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/350_instructions_P-350M.pdf",page:31,ref:"P-350M"},
+  "351":{models:"350, 351",url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/350_instructions_P-350M.pdf",page:31,ref:"P-350M"},
+  "380":{models:"380",url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/380_8in_instructions_P-388M.pdf",page:11,ref:"P-388M"},
+  "590":{models:"590",url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/590_instructions_P-590M.pdf",page:35,ref:"P-590M"},
+  "2000":{models:"2000",url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/DF2000_instructions_P-2000M.pdf",page:10,ref:"P-2000M"},
+  "270":{models:"270",url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/DF270_instructions_P-270M.pdf",page:24,ref:"P-270M"},
+  "400":{models:"400",url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/DF400_instructions_P-400M.pdf",page:25,ref:"P-400M"},
+  "570":{models:"570, 571, 573",url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/570-571-573_instructions_P-570M.pdf",page:30,ref:"P-570M"},
+  "571":{models:"570, 571, 573",url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/570-571-573_instructions_P-570M.pdf",page:30,ref:"P-570M"},
+  "573":{models:"570, 571, 573",url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/570-571-573_instructions_P-570M.pdf",page:30,ref:"P-570M"},
+  "100":{models:"100",url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/DF100_Instructions_P-100M.pdf",page:10,ref:"P-100M"},
+  "234":{models:"234",url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/DF234_instructions_P-234M.pdf",page:25,ref:"P-234M"},
+  "2410":{models:"2410",url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/DF2410_instructions_P-2410CM.pdf",page:9,ref:"P-2410CM"}
+};
+
+const RAMP = {
+  '1"|150':{tb11:841,tb14:120},'1"|300':{tb11:1348,tb14:193},'1"|600':{tb11:1348,tb14:193},'1"|900':{tb11:2795,tb14:400},'1"|1500':{tb11:2795,tb14:400},'1"|2500':{tb11:2795,tb14:400},
+  '1½"|150':{tb11:841,tb14:120},'1½"|300':{tb11:2015,tb14:193},'1½"|600':{tb11:2015,tb14:193},'1½"|900':{tb11:3676,tb14:527},'1½"|1500':{tb11:3676,tb14:527},'1½"|2500':{tb11:4857,tb14:696},
+  '2"|150':{tb11:1348,tb14:193},'2"|300':{tb11:2695,tb14:289},'2"|600':{tb11:2695,tb14:289},'2"|900':{tb11:5000,tb14:527},'2"|1500':{tb11:5000,tb14:802},'2"|2500':{tb11:5000,tb14:1176},
+  '3"|150':{tb11:1348,tb14:193},'3"|300':{tb11:4030,tb14:386},'3"|600':{tb11:4030,tb14:386},'3"|900':{tb11:5000,tb14:801},'3"|1500':{tb11:5000,tb14:1301},'3"|2500':{tb11:5000,tb14:1776},
+  '4"|150':{tb11:2695,tb14:386},'4"|300':{tb11:4030,tb14:577},'4"|600':{tb11:5000,tb14:801},'4"|900':{tb11:5000,tb14:1392},'4"|1500':{tb11:5000,tb14:1776},'4"|2500':{tb11:5000,tb14:2686},
+  '6"|150':{tb11:4030,tb14:577},'6"|300':{tb11:5000,tb14:866},'6"|600':{tb11:5000,tb14:1580},'6"|900':{tb11:5000,tb14:2087},'6"|1500':{tb11:5000,tb14:3312},'6"|2500':{tb11:5000,tb14:5000},
+  '8"|150':{tb11:4030,tb14:577},'8"|300':{tb11:5000,tb14:1201},'8"|600':{tb11:5000,tb14:2087},'8"|900':{tb11:5000,tb14:3312},'8"|1500':{tb11:5000,tb14:4817},'8"|2500':{tb11:5000,tb14:5000},
+  '10"|150':{tb11:5000,tb14:1201},'10"|300':{tb11:5000,tb14:2104},'10"|600':{tb11:5000,tb14:3439},'10"|900':{tb11:5000,tb14:5000},'10"|1500':{tb11:5000,tb14:5000},'10"|2500':{tb11:5000,tb14:5000},
+  '12"|150':{tb11:5000,tb14:1201},'12"|300':{tb11:5000,tb14:2783},'12"|600':{tb11:5000,tb14:4439},'12"|900':{tb11:5000,tb14:5000},'12"|1500':{tb11:5000,tb14:5000},'12"|2500':{tb11:5000,tb14:5000},
+  '14"|150':{tb11:5000,tb14:1580},'14"|300':{tb11:5000,tb14:3479},'14"|600':{tb11:5000,tb14:5000},'14"|900':{tb11:5000,tb14:5000},'14"|1500':{tb11:5000,tb14:5000},'14"|2500':{tb11:5000,tb14:5000},
+  '16"|150':{tb11:5000,tb14:2106},'16"|300':{tb11:5000,tb14:4439},'16"|600':{tb11:5000,tb14:5000},'16"|900':{tb11:5000,tb14:5000},'16"|1500':{tb11:5000,tb14:5000},'16"|2500':{tb11:5000,tb14:5000},
+  '24"|150':{tb11:5000,tb14:5000},'24"|300':{tb11:5000,tb14:5000},'24"|600':{tb11:5000,tb14:5000},'24"|900':{tb11:5000,tb14:5000},'24"|1500':{tb11:5000,tb14:5000},'24"|2500':{tb11:5000,tb14:5000}
+};
+
+const VALVE_SIZES = ['1"','1½"','2"','3"','4"','6"','8"','10"','12"','14"','16"','24"'];
+const VALVE_RATINGS = ['150','300','600','900','1500','2500'];
+const DYNAFLO_VALVE_TYPES = ["100","234","270","320","350","351","360","361","362","363","380","390","391","392","400","570","571","573","590","2000","2410"];
+const FISHER_VALVE_TYPES = ["D2","D BODY","D3","D4","ET","ED","ES","EZ","LARGE ET","LARGE ED","EHT","EHD","EHS","HPT","HPD","HPS","V200","V150","V300","V250","8500"];
+
+// ═══════════════════════════════════════════════════════════
+// ACTUATOR DATA
+// Each Dyna-Flo actuator model+size maps to: Fisher equiv + PDF URL + page
+// pill label = "DFC-1046", resolves to manual + fisher equiv
+// ═══════════════════════════════════════════════════════════
+
+// Dyna-Flo DFC/DFO (Sliding Stem) → Fisher 667 (DFC) / 657 (DFO)
+// Sizes from cross-reference sheet: 1046, 1069, 2069, 2105, 2156, 3105, 3156, 3220, 3220-4
+const DFC_URL  = "https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/DFC_instructions_P-DFCM.pdf";
+const DFO_URL  = "https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/DFO_instructions_P-DFOM.pdf";
+const DFR1_URL = "https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/DFR026_instructions_P-DFR1M.pdf";
+const DFR2_URL = "https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/DFR047_instructions_P-DFR2M.pdf";
+const DFR3_URL = "https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/DFR070-220_instructions_P-DFR3M.pdf";
+const DFLP_URL = "https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/DFLP_instructions_P-DFLPM.pdf";
+const DFRP_URL = "https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/DFRP_instructions_P-DFRPM.pdf";
+
+// ACT_MAP: key = Dyna-Flo pill label → { fisher, url, page, ref, family }
+const ACT_MAP = {
+  // DFC — sliding stem, Fisher 667
+  "DFC-1046": {fisher:"667 — Size 30", url:DFC_URL, page:32, ref:"P-DFCM", family:"DFC Sliding Stem"},
+  "DFC-1069": {fisher:"667 — Size 34", url:DFC_URL, page:32, ref:"P-DFCM", family:"DFC Sliding Stem"},
+  "DFC-2069": {fisher:"667 — Size 40", url:DFC_URL, page:32, ref:"P-DFCM", family:"DFC Sliding Stem"},
+  "DFC-2105": {fisher:"667 — Size 45", url:DFC_URL, page:32, ref:"P-DFCM", family:"DFC Sliding Stem"},
+  "DFC-2156": {fisher:"667 — Size 46", url:DFC_URL, page:32, ref:"P-DFCM", family:"DFC Sliding Stem"},
+  "DFC-3105": {fisher:"667 — Size 50", url:DFC_URL, page:32, ref:"P-DFCM", family:"DFC Sliding Stem"},
+  "DFC-3156": {fisher:"667 — Size 60", url:DFC_URL, page:32, ref:"P-DFCM", family:"DFC Sliding Stem"},
+  "DFC-3220": {fisher:"667 — Size 70", url:DFC_URL, page:32, ref:"P-DFCM", family:"DFC Sliding Stem"},
+  "DFC-3220-4":{fisher:"667-4 — Size 70", url:DFC_URL, page:32, ref:"P-DFCM", family:"DFC Sliding Stem"},
+  // DFO — sliding stem, Fisher 657
+  "DFO-1046": {fisher:"657 — Size 30", url:DFO_URL, page:33, ref:"P-DFOM", family:"DFO Sliding Stem"},
+  "DFO-1069": {fisher:"657 — Size 34", url:DFO_URL, page:33, ref:"P-DFOM", family:"DFO Sliding Stem"},
+  "DFO-2069": {fisher:"657 — Size 40", url:DFO_URL, page:33, ref:"P-DFOM", family:"DFO Sliding Stem"},
+  "DFO-2105": {fisher:"657 — Size 45", url:DFO_URL, page:33, ref:"P-DFOM", family:"DFO Sliding Stem"},
+  "DFO-2156": {fisher:"657 — Size 46", url:DFO_URL, page:33, ref:"P-DFOM", family:"DFO Sliding Stem"},
+  "DFO-3105": {fisher:"657 — Size 50", url:DFO_URL, page:33, ref:"P-DFOM", family:"DFO Sliding Stem"},
+  "DFO-3156": {fisher:"657 — Size 60", url:DFO_URL, page:33, ref:"P-DFOM", family:"DFO Sliding Stem"},
+  "DFO-3220": {fisher:"657 — Size 70", url:DFO_URL, page:33, ref:"P-DFOM", family:"DFO Sliding Stem"},
+  "DFO-3220-4":{fisher:"657-4 — Size 70", url:DFO_URL, page:33, ref:"P-DFOM", family:"DFO Sliding Stem"},
+  // DFR rotary
+  "DFR-026":  {fisher:"1052 — Size 20", url:DFR1_URL, page:19, ref:"P-DFR1M", family:"DFR Rotary"},
+  "DFR-047":  {fisher:"1052 — Size 33", url:DFR2_URL, page:24, ref:"P-DFR2M", family:"DFR Rotary"},
+  "DFR-070":  {fisher:"1052 — Size 40", url:DFR3_URL, page:29, ref:"P-DFR3M", family:"DFR Rotary"},
+  "DFR-156":  {fisher:"1052 — Size 60", url:DFR3_URL, page:29, ref:"P-DFR3M", family:"DFR Rotary"},
+  "DFR-220":  {fisher:"1052 — Size 70", url:DFR3_URL, page:29, ref:"P-DFR3M", family:"DFR Rotary"},
+  // DFLP linear
+  "DFLP-113": {fisher:"470 — Size 80", url:DFLP_URL, page:17, ref:"P-DFLPM", family:"DFLP Linear"},
+  "DFLP-154": {fisher:"470 — Size 100", url:DFLP_URL, page:17, ref:"P-DFLPM", family:"DFLP Linear"},
+  // DFRP rotary
+  "DFRP-018": {fisher:"1061 — Size 30", url:DFRP_URL, page:25, ref:"P-DFRPM", family:"DFRP Rotary"},
+  "DFRP-028": {fisher:"1061 — Size 40", url:DFRP_URL, page:25, ref:"P-DFRPM", family:"DFRP Rotary"},
+  "DFRP-079": {fisher:"1061 — Size 60", url:DFRP_URL, page:25, ref:"P-DFRPM", family:"DFRP Rotary"},
+  "DFRP-112": {fisher:"1061 — Size 68", url:DFRP_URL, page:25, ref:"P-DFRPM", family:"DFRP Rotary"},
+  "DFRP-113": {fisher:"1061 — Size 80", url:DFRP_URL, page:25, ref:"P-DFRPM", family:"DFRP Rotary"},
+  "DFRP-154": {fisher:"1061 — Size 100", url:DFRP_URL, page:25, ref:"P-DFRPM", family:"DFRP Rotary"},
+};
+
+// Fisher actuator → Dyna-Flo equivalents (for Fisher brand view)
+// key = Fisher pill label, value = Dyna-Flo key in ACT_MAP
+const ACT_FISHER_TO_DF = {
+  "667-30":  "DFC-1046", "667-34":  "DFC-1069", "667-40": "DFC-2069",
+  "667-45":  "DFC-2105", "667-46":  "DFC-2156", "667-50": "DFC-3105",
+  "667-60":  "DFC-3156", "667-70":  "DFC-3220", "667-4-70":"DFC-3220-4",
+  "657-30":  "DFO-1046", "657-34":  "DFO-1069", "657-40": "DFO-2069",
+  "657-45":  "DFO-2105", "657-46":  "DFO-2156", "657-50": "DFO-3105",
+  "657-60":  "DFO-3156", "657-70":  "DFO-3220", "657-4-70":"DFO-3220-4",
+  "1052-20": "DFR-026",  "1052-33": "DFR-047",  "1052-40":"DFR-070",
+  "1052-60": "DFR-156",  "1052-70": "DFR-220",
+  "470-80":  "DFLP-113", "470-100": "DFLP-154",
+  "1061-30": "DFRP-018", "1061-40": "DFRP-028", "1061-60":"DFRP-079",
+  "1061-68": "DFRP-112", "1061-80": "DFRP-113", "1061-100":"DFRP-154"
+};
+
+const DYNAFLO_ACT_TYPES = Object.keys(ACT_MAP);
+const FISHER_ACT_TYPES  = Object.keys(ACT_FISHER_TO_DF);
+
+// ═══════════════════════════════════════════════════════════
+// INSTRUMENT DATA
+// ═══════════════════════════════════════════════════════════
+const INSTRUMENT_REFS = [
+  {name:"Dyna-Flo 4000", fisher:"Fisher 4150", url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/4000_instructions_P-4000M.pdf", page:1},
+  {name:"Dyna-Flo 4000LB", fisher:"Fisher C1",  url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/4000LB_instructions_P-40LBM.pdf", page:1},
+  {name:"Dyna-Flo 5000", fisher:"Fisher L2",  url:"https://valves.curtisswright.com/sites/default/files/Dynaflo/Library/5000_instructions_P-5000M.pdf", page:1}
+];
+
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+let valveBrand = "Dyna-Flo", valveType = "", valveSize = "", valveRating = "";
+let actBrand   = "Dyna-Flo", actType   = "";
+
+// ═══════════════════════════════════════════════════════════
+// SHARED PILL RENDERER
+// ═══════════════════════════════════════════════════════════
+function renderPills(containerId, options, selected, onSelect, compact) {
+  const c = document.getElementById(containerId);
+  c.innerHTML = "";
+  options.forEach(o => {
+    const b = document.createElement("button");
+    b.className = "pill" + (compact?" compact":"") + (o===selected?" active":"");
+    b.textContent = o;
+    b.onclick = () => onSelect(o === selected ? "" : o);
+    c.appendChild(b);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// VALVE TAB LOGIC
+// ═══════════════════════════════════════════════════════════
+function setValveBrand(b) {
+  valveBrand = b; valveType = "";
+  document.querySelectorAll("#valve-brand-toggle .brand-btn").forEach(btn => btn.classList.toggle("active", btn.textContent.trim()===b));
+  document.getElementById("valve-fisher-link").style.display = b==="Fisher" ? "block" : "none";
+  renderValveTypePills();
+  document.getElementById("valve-results").classList.remove("visible");
+  setErr("valve","");
+}
+function renderValveTypePills() {
+  const opts = valveBrand==="Fisher" ? FISHER_VALVE_TYPES : DYNAFLO_VALVE_TYPES;
+  renderPills("valve-type-pills", opts, valveType, v => { valveType=v; renderValveTypePills(); }, valveBrand==="Fisher");
+  document.getElementById("valve-type-label").textContent = "Valve Type (" + valveBrand + ")";
+}
+function renderValveSizePills()   { renderPills("valve-size-pills",   VALVE_SIZES,   valveSize,   v=>{ valveSize=v;   renderValveSizePills(); },   false); }
+function renderValveRatingPills() { renderPills("valve-rating-pills", VALVE_RATINGS, valveRating, v=>{ valveRating=v; renderValveRatingPills(); }, false); }
+
+function doValveLookup() {
+  setErr("valve","");
+  document.getElementById("valve-results").classList.remove("visible");
+  if (!valveType)   { setErr("valve","Select a valve type.");    return; }
+  if (!valveSize)   { setErr("valve","Select a valve size.");    return; }
+  if (!valveRating) { setErr("valve","Select a flange rating."); return; }
+
+  let dfModel, crossRef;
+  const up = valveType.toUpperCase();
+  if (valveBrand==="Fisher") {
+    const m = VALVE_FISHER_TO_DF[up];
+    if (!m) { setErr("valve",'No Dyna-Flo equivalent for Fisher "'+valveType+'".');  return; }
+    dfModel=m; crossRef=up+" → Dyna-Flo "+m;
+  } else { dfModel=up; crossRef=null; }
+
+  const ramp = RAMP[valveSize+"|"+valveRating];
+  if (!ramp) { setErr("valve","No ramp data for "+valveSize+" / "+valveRating+"#."); return; }
+
+  const manual = VALVE_MANUAL_MAP[dfModel]||null;
+
+  document.getElementById("valve-resolved-model").textContent = crossRef||"Dyna-Flo "+dfModel;
+  document.getElementById("valve-resolved-sub").textContent   = valveSize+" · "+valveRating+"# flanged";
+
+  const t11=document.getElementById("valve-tb11"), t14=document.getElementById("valve-tb14");
+  t11.textContent=ramp.tb11.toLocaleString(); t11.className="ramp-value"+(ramp.tb11===5000?" max":"");
+  t14.textContent=ramp.tb14.toLocaleString(); t14.className="ramp-value"+(ramp.tb14===5000?" max":"");
+  document.getElementById("valve-ramp-warn").classList.toggle("visible", ramp.tb11===5000||ramp.tb14===5000);
+
+  if (manual) {
+    document.getElementById("valve-manual-inner").style.display="flex";
+    document.getElementById("valve-no-manual").style.display="none";
+    document.getElementById("valve-manual-ref").textContent    = manual.ref;
+    document.getElementById("valve-manual-page").textContent   = "Page "+manual.page;
+    document.getElementById("valve-manual-models").textContent = "Dyna-Flo "+manual.models;
+    document.getElementById("valve-manual-btn").href           = manual.url+"#page="+manual.page;
+    document.getElementById("valve-manual-btn-text").textContent = "Open Manual — Page "+manual.page;
+  } else {
+    document.getElementById("valve-manual-inner").style.display="none";
+    document.getElementById("valve-no-manual").style.display="block";
+    document.getElementById("valve-no-manual").textContent="No manual found for model "+dfModel;
+  }
+  document.getElementById("valve-results").classList.add("visible");
+}
+
+// ═══════════════════════════════════════════════════════════
+// ACTUATOR TAB LOGIC
+// ═══════════════════════════════════════════════════════════
+function setActBrand(b) {
+  actBrand=b; actType="";
+  document.querySelectorAll("#act-brand-toggle .brand-btn").forEach(btn => btn.classList.toggle("active", btn.textContent.trim()===b));
+  document.getElementById("act-fisher-link").style.display = b==="Fisher" ? "block" : "none";
+  renderActTypePills();
+  document.getElementById("act-results").classList.remove("visible");
+  setErr("act","");
+}
+function renderActTypePills() {
+  const opts = actBrand==="Fisher" ? FISHER_ACT_TYPES : DYNAFLO_ACT_TYPES;
+  renderPills("act-type-pills", opts, actType, v=>{ actType=v; renderActTypePills(); }, true);
+  document.getElementById("act-type-label").textContent = "Actuator Type (" + actBrand + ")";
+}
+
+function doActLookup() {
+  setErr("act","");
+  document.getElementById("act-results").classList.remove("visible");
+  if (!actType) { setErr("act","Select an actuator type."); return; }
+
+  let dfKey, crossRef;
+  if (actBrand==="Fisher") {
+    dfKey = ACT_FISHER_TO_DF[actType];
+    if (!dfKey) { setErr("act",'No Dyna-Flo equivalent for Fisher "'+actType+'".');  return; }
+    crossRef = actType+" → "+dfKey;
+  } else { dfKey=actType; crossRef=null; }
+
+  const entry = ACT_MAP[dfKey];
+  if (!entry) { setErr("act","No data found for "+dfKey+"."); return; }
+
+  document.getElementById("act-resolved-model").textContent = crossRef || dfKey;
+  document.getElementById("act-resolved-sub").textContent   = entry.family+" · Fisher equiv: "+entry.fisher;
+
+  document.getElementById("act-manual-inner").style.display="flex";
+  document.getElementById("act-no-manual").style.display="none";
+  document.getElementById("act-manual-ref").textContent    = entry.ref;
+  document.getElementById("act-manual-page").textContent   = "Page "+entry.page;
+  document.getElementById("act-manual-models").textContent = dfKey+" ("+entry.family+")";
+  document.getElementById("act-manual-btn").href           = entry.url+"#page="+entry.page;
+  document.getElementById("act-manual-btn-text").textContent = "Open Manual — Page "+entry.page;
+
+  document.getElementById("act-results").classList.add("visible");
+}
+
+// ═══════════════════════════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════════════════════════
+const TABS = ["valve","actuator","instrument"];
+function switchTab(tab) {
+  document.querySelectorAll(".tab-btn").forEach((b,i)=>b.classList.toggle("active",TABS[i]===tab));
+  TABS.forEach(t=>document.getElementById("tab-"+t).classList.toggle("active",t===tab));
+}
+
+// ═══════════════════════════════════════════════════════════
+// ERROR HELPER
+// ═══════════════════════════════════════════════════════════
+function setErr(prefix, msg) {
+  const box = document.getElementById(prefix+"-error");
+  const txt = document.getElementById(prefix+"-error-text");
+  if (msg) { txt.textContent=msg; box.classList.add("visible"); }
+  else { box.classList.remove("visible"); txt.textContent=""; }
+}
+
+// ═══════════════════════════════════════════════════════════
+// CROSS-REF MODAL (shared, reused for valve + actuator)
+// ═══════════════════════════════════════════════════════════
+let xrefData = null;
+function openXrefModal(ctx) {
+  const modal = document.getElementById("xref-modal");
+  const body  = document.getElementById("xref-modal-body");
+  const title = document.getElementById("xref-modal-title");
+  body.innerHTML = "";
+  if (ctx==="valve") {
+    title.textContent = "Fisher Valve → Dyna-Flo";
+    Object.entries(VALVE_FISHER_TO_DF).forEach(([k,v])=>{
+      const row=document.createElement("div"); row.className="xref-row";
+      row.innerHTML=`<span class="xref-key">${k}</span><span class="xref-val">Dyna-Flo ${v}</span>`;
+      body.appendChild(row);
+    });
+  } else {
+    title.textContent = "Fisher Actuator → Dyna-Flo";
+    Object.entries(ACT_FISHER_TO_DF).forEach(([k,v])=>{
+      const row=document.createElement("div"); row.className="xref-row";
+      row.innerHTML=`<span class="xref-key">${k}</span><span class="xref-val">${v}</span>`;
+      body.appendChild(row);
+    });
+  }
+  modal.classList.add("open");
+}
+function closeXrefModal() { document.getElementById("xref-modal").classList.remove("open"); }
+
+// ═══════════════════════════════════════════════════════════
+// INSTRUMENT CARDS
+// ═══════════════════════════════════════════════════════════
+function buildInstrumentCards() {
+  const list = document.getElementById("instrument-list");
+  const BOOK = `<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`;
+  const WRENCH = `<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#AD1800" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`;
+  INSTRUMENT_REFS.forEach(ref => {
+    const card=document.createElement("div"); card.className="ref-card";
+    card.innerHTML=`
+      <div class="ref-card-header">${WRENCH}<div><div class="ref-name">${ref.name}</div><div class="ref-sub">Fisher equiv: ${ref.fisher}</div></div></div>
+      <a class="ref-btn" href="${ref.url}#page=${ref.page}" target="_blank" rel="noopener noreferrer">${BOOK} Open Manual — Page ${ref.page}</a>`;
+    list.appendChild(card);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+renderValveTypePills();
+renderValveSizePills();
+renderValveRatingPills();
+renderActTypePills();
+buildInstrumentCards();
+</script>
+</body>
+</html>
